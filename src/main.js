@@ -1,0 +1,496 @@
+import 'phaser';
+
+export class Kinetic extends Phaser.Plugins.BasePlugin{
+
+    constructor(plugimManager){
+
+        super(plugimManager);
+
+        this.pointerId = null;
+        this.dragging = false;
+        this.pressedDown = false;
+        this.timestamp = 0;
+        //this.callbackID = 0;
+
+        this.targetX = 0;
+        this.targetY = 0;
+
+        this.autoScrollX = false;
+        this.autoScrollY = false;
+
+        this.startX = 0;
+        this.startY = 0;
+
+        this.velocityX = 0;
+        this.velocityY = 0;
+
+        this.amplitudeX = 0;
+        this.amplitudeY = 0;
+
+        this.directionWheel = 0;
+
+        this.velocityWheelX = 0;
+        this.velocityWheelY = 0;
+
+        // if less than the two values is a Tap
+        this.thresholdOfTapTime = 100;
+        this.thresholdOfTapDistance = 10;
+
+        // for a smoother scrolling start
+        this.thresholdReached = false;
+
+        this.clickHelperActiveObjects = [];
+
+        this.settings = {
+            kineticMovement: true,
+            timeConstantScroll: 325, //really mimic iOS
+            hScroll: true,          // horizontal with pointer
+            vScroll: true,          // vertical
+            hWheel: false,          //horizontal scroll mouse wheel
+            vWheel: true,           //vertiacal 
+            deltaWheel: 20,
+            onUpdate: (x, y) => {console.log('x=' + x + ', y='+ y)}
+           // button: "" ? пока без настроки кнопки  `leftButton`, `rightButton`, `middleButton`
+        };
+
+        this.scene;
+        this.camera;
+        this.clearMovementTimer = 0;
+    
+    }
+
+    init(data){
+        if (data) this.configure(data);
+        console.log('kinetic init');
+    }
+
+    start(scene, camera){
+        if(scene == undefined){
+            return 0;
+        }
+
+        // если вызываем из конфига игры global то
+        //if scene == string then getScene(key);
+        // иначе if scene typeof Phaser.Scene то
+        this.scene = scene;
+
+        this.eventEmitter = this.scene.events;
+
+        if(camera == undefined){
+            this.camera = scene.cameras.main;
+        }else{
+            this.camera = camera;
+        }
+
+        this.eventEmitter = this.game.events;
+
+        this.eventEmitter.on('step', this.update, this);
+
+        this.scene.input.on('pointerdown', this.beginMove, this);
+        
+        //this.callbackID = 
+        this.scene.input.on('pointermove', this.moveCamera, this);
+
+        this.scene.input.on('pointerup', this.endMove, this);
+
+        this.game.events.on('mouseout', this.endMove, this);
+
+        if (window.addEventListener)
+        {
+            window.addEventListener('DOMMouseScroll', this.mouseWheel.bind(this), false);
+            window.onmousewheel = this.mouseWheel.bind(this);
+        }
+    }
+
+    beginMove(pointer) {
+        this.pointerId = pointer.id;
+        this.startX = this.game.input.x;
+        this.startY = this.game.input.y;
+
+        this.screenX = pointer.screenX;
+        this.screenY = pointer.screenY;
+
+        this.pressedDown = true;
+        this.thresholdReached = false;
+
+        this.timestamp = Date.now();
+
+        // the time of press down
+        this.beginTime = this.timestamp;
+
+        this.velocityY = this.amplitudeY = this.velocityX = this.amplitudeX = 0;
+    }
+
+    moveCamera(pointer) {
+
+        let x = pointer.x;
+        let y = pointer.y;
+
+        clearTimeout(this.clearMovementTimer);
+        // надо попробывать запускать pointermove после pointerdown
+        if (!this.pressedDown) {
+            return;
+        }
+
+        // If it is not the current pointer
+        if (this.pointerId !== pointer.id) {
+            return;
+        }
+
+        this.now = Date.now();
+        var elapsed = this.now - this.timestamp;
+        this.timestamp = this.now;
+
+        var deltaX = 0;
+        var deltaY = 0;
+
+        // It`s a fast tap not move
+        if ( this.isTap()
+            && Math.abs(pointer.screenY - this.screenY) < this.thresholdOfTapDistance
+            && Math.abs(pointer.screenX - this.screenX) < this.thresholdOfTapDistance
+        ) {
+            return;
+        }
+
+        if (!this.thresholdReached) {
+            this.thresholdReached = true;
+            this.startX = x;
+            this.startY = y;
+            this.cancelClickEvHandlers();
+            return;
+        }
+
+        if (this.settings.hScroll) {
+            deltaX = x - this.startX;
+            if (deltaX !== 0) {
+                this.dragging = true;
+            }
+            this.startX = x;
+            this.velocityX = 0.8 * (1000 * deltaX / (1 + elapsed)) + 0.2 * this.velocityX;
+            this.camera.scrollX -= deltaX;
+        }
+
+        if (this.settings.vScroll) {
+            deltaY = y - this.startY;
+            if (deltaY !== 0) {
+                this.dragging = true;
+            }
+            this.startY = y;
+            this.velocityY = 0.8 * (1000 * deltaY / (1 + elapsed)) + 0.2 * this.velocityY;
+            this.camera.scrollY -= deltaY;
+        }
+
+        if (typeof this.settings.onUpdate === 'function') {
+            var updateX = 0;
+            if (this.canCameraMoveX(this.camera, deltaX)) {
+                updateX = deltaX;
+            }
+
+            var updateY = 0;
+            if (this.canCameraMoveY(this.camera, deltaY)) {
+                updateY = deltaY;
+            }
+
+            this.settings.onUpdate(updateX, updateY);
+        }
+
+        this.clearMovementTimer = setTimeout(function () {
+            this.velocityX = 0;
+            this.velocityY = 0;
+        }.bind(this), 20);
+    }
+
+    /**
+    * Validate if the gesture is a tap
+    * @return {boolean}
+    */
+    isTap() {
+        return (this.now - this.beginTime) < this.thresholdOfTapTime;
+    };
+
+    endMove() {
+       // console.log('end move');
+        clearTimeout(this.clearMovementTimer);
+
+        this.pointerId = null;
+        this.pressedDown = false;
+        this.autoScrollX = false;
+        this.autoScrollY = false;
+
+        if (!this.settings.kineticMovement) return;
+
+        this.now = Date.now();
+
+        if (this.game.isOver) {
+            if (this.velocityX > 10 || this.velocityX < -10) {
+                this.amplitudeX = 0.8 * this.velocityX;
+                this.targetX = Math.round(this.camera.scrollX - this.amplitudeX);
+                this.autoScrollX = true;
+            }
+
+            if (this.velocityY > 10 || this.velocityY < -10) {
+                this.amplitudeY = 0.8 * this.velocityY;
+                this.targetY = Math.round(this.camera.scrollY - this.amplitudeY);
+                this.autoScrollY = true;
+            }
+        }
+        if (!this.game.isOver) {
+            this.velocityWheelXAbs = Math.abs(this.velocityWheelX);
+            this.velocityWheelYAbs = Math.abs(this.velocityWheelY);
+            if ( this.settings.hScroll) {
+                this.autoScrollX = true;
+            }
+            if (this.settings.vScroll) {
+                this.autoScrollY = true;
+            }
+        }
+    }
+
+    update(time, elapsed) {
+        //console.log(this.scene.input.isOver);
+        //console.log(time, delta);
+        //if(!elapsed){
+            this.elapsed = Date.now() - this.timestamp;
+        //}else{
+       //     this.elapsed = elapsed; 
+       // }
+        
+        this.velocityWheelXAbs = Math.abs(this.velocityWheelX);
+        this.velocityWheelYAbs = Math.abs(this.velocityWheelY);
+
+        var delta = 0;
+        if (this.autoScrollX && this.amplitudeX != 0) {
+
+           // debugger;
+            delta = -this.amplitudeX * Math.exp(-this.elapsed / this.settings.timeConstantScroll);
+            if (this.canCameraMoveX(this.camera, delta) && (delta > 0.5 || delta < -0.5)) {
+                this.camera.scrollX = this.targetX - delta;
+            }
+            else {
+                this.autoScrollX = false;
+                this.camera.scrollX = this.targetX;
+            }
+        }
+
+        if (this.autoScrollY && this.amplitudeY != 0) {
+
+            delta = -this.amplitudeY * Math.exp(-this.elapsed / this.settings.timeConstantScroll);
+            if (this.canCameraMoveY(this.camera, delta) && (delta > 0.5 || delta < -0.5)) {
+                this.camera.scrollY = this.targetY - delta;
+            }
+            else {
+                this.autoScrollY = false;
+                this.camera.scrollY = this.targetY;
+            }
+        }
+
+        if (!this.autoScrollX && !this.autoScrollY) {
+            this.dragging = false;
+        }
+
+        if (this.settings.hWheel && this.velocityWheelXAbs > 0.1) {
+            this.dragging = true;
+            this.amplitudeX = 0;
+            this.autoScrollX = false;
+            this.camera.scrollX -= this.velocityWheelX;
+            this.velocityWheelX *= 0.95;
+        }
+
+        if (this.settings.vWheel && this.velocityWheelYAbs > 0.1) {
+            this.dragging = true;
+            this.autoScrollY = false;
+            this.camera.scrollY -= this.velocityWheelY;
+            this.velocityWheelY *= 0.95;
+        }
+    };
+
+      /**
+    * Indicates when camera can move in the x axis
+    * @return {boolean}
+    */
+    canCameraMoveX(cam, delta) {
+        let bounds = cam.getScroll(cam.scrollX + delta, 0);
+        if(cam.scrollX != bounds.x){
+            return true;
+        }
+        return false;
+    };
+
+          /**
+    * Indicates when camera can move in the y axis
+    * @return {boolean}
+    */
+    canCameraMoveY(cam, delta) {
+        let bounds = cam.getScroll(0, cam.scrollY + delta);
+        if(cam.scrollY != bounds.x){
+            return true;
+        }
+        return false;
+    };
+
+    /**
+    * Event called when the mousewheel is used, affect the direction of scrolling.
+    */
+    mouseWheel(event) {
+
+        if (!this.settings.hWheel && !this.settings.vWheel) return;
+
+        event.preventDefault();
+        let delta = 0;
+        let wheelDelta = 0;
+
+        wheelDelta = event.wheelDelta || -event.detail;
+        wheelDelta = Math.max(-1, Math.min(1, wheelDelta));
+        delta = wheelDelta * 120 / this.settings.deltaWheel;
+
+        if (this.directionWheel != wheelDelta) {
+            this.velocityWheelX = 0;
+            this.velocityWheelY = 0;
+            this.directionWheel = wheelDelta;
+        }
+
+        let cam = this.camera;
+
+        if (this.settings.hWheel) {
+            this.autoScrollX = false;
+
+            this.velocityWheelX += delta;
+
+            if (typeof this.settings.onUpdate === 'function') {
+                var deltaX = 0;
+                // if (this.camera.scrollX > 0 
+                //     && this.camera.scrollX + this.game.camera.width < this.game.camera.bounds.width) {
+                //     deltaX = delta;
+                // }
+                //debugger;
+                // let scrollX = cam.scrollX;
+                // let bounds = cam.getScroll(scrollX + delta, 0);
+                // if(scrollX != bounds.x){
+                //     deltaX = delta;
+                // }
+
+                if(this.canCameraMoveX(cam, delta)){
+                    deltaX = delta;
+                }
+
+                this.settings.onUpdate(deltaX, 0);
+            }
+        }
+        
+        if (this.settings.vWheel) {
+            this.autoScrollY = false;
+
+            this.velocityWheelY += delta;
+
+            if (typeof this.settings.onUpdate === 'function') {
+                var deltaY = 0;
+                // let scrollY = cam.scrollY;
+                // let bounds = cam.getScroll(0, scrollY + delta);
+                // if(scrollY != bounds.y){
+                //     deltaY = delta;
+                // }
+
+                if(this.canCameraMoveY(cam, delta)){
+                    deltaY = delta;
+                }
+                this.settings.onUpdate(0, deltaY);
+            }
+        }
+    };
+
+    emit(){
+
+    }
+
+    /**
+    * Adds click event helpers
+    * @return {boolean}
+    */
+    addClickEvents(obj, events) {
+        if (!obj.clickHandlers) {
+
+            obj.clickHandlers = events;
+            obj.inputEnabled = true;
+
+            obj.clickHandlers.inputIsDown = false;
+
+            obj.events.onInputDown.add(function () {
+                obj.clickHandlers.downTimer = setTimeout(function () {
+                    obj.clickHandlers.downTimer = null;
+                    if (!this.thresholdReached) {
+                        this.clickHelperActiveObjects.push(obj);
+                        obj.clickHandlers.inputIsDown = true;
+                        obj.clickHandlers.down && obj.clickHandlers.down(obj);
+                    }
+                }.bind(this), this.thresholdOfTapTime + 10);
+            }, this);
+
+            obj.events.onInputUp.add(function () {
+
+                this.clickHelperActiveObjects.splice(this.clickHelperActiveObjects.indexOf(obj));
+
+                if (obj.clickHandlers.inputIsDown) {
+                    obj.clickHandlers.up && obj.clickHandlers.up(obj);
+                    this.isTap() && obj.clickHandlers.click && obj.clickHandlers.click(obj);
+                    obj.clickHandlers.inputIsDown = false;
+                } else if (obj.clickHandlers.downTimer && !this.thresholdReached) {
+                    //It was a perfect tap, so we trigger all the events at once
+                    clearTimeout(obj.clickHandlers.downTimer);
+                    obj.clickHandlers.down && obj.clickHandlers.down(obj);
+                    obj.clickHandlers.up && obj.clickHandlers.up(obj);
+                    obj.clickHandlers.click && obj.clickHandlers.click(obj);
+                }
+            }.bind(this));
+
+        } else {
+            for (var eventName in events) {
+                if (events.hasOwnProperty(eventName)) {
+                    obj.clickHandlers[eventName] = events[eventName];
+                }
+            }
+        }
+    };
+
+    cancelClickEvHandlers() {
+        this.clickHelperActiveObjects.forEach(function (obj) {
+            var inputIsDown = obj.clickHandlers.inputIsDown;
+            obj.clickHandlers.inputIsDown = false;
+            if (inputIsDown && obj.clickHandlers.up) {
+                obj.clickHandlers.up();
+            }
+        });
+    };
+
+
+    stop(){
+        this.eventEmitter.off('step', this.update);
+        this.pressedDown = false;
+        
+        this.scene.input.off('pointerdown', this.this.beginMove, this);
+
+        this.scene.input.off('pointermove', this.moveCamera, this);
+
+        this.scene.input.off('pointerup', this.endMove, this);
+
+        this.game.events.off('mouseout', this.endMove, this);
+
+        if (window.addEventListener)
+        {
+            window.removeEventListener('DOMMouseScroll', this.mouseWheel.bind(this), false);
+            window.onmousewheel = null;
+        }
+
+        this.clickHelperActiveObjects.length = 0;
+    }
+
+    configure(data){
+        //Object.assign(this, data);
+        if (data) {
+            for (var property in data) {
+                if (this.settings.hasOwnProperty(property)) {
+                    this.settings[property] = data[property];
+                }
+            }
+        }
+    }
+}
