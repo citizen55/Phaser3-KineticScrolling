@@ -49,14 +49,14 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
             hWheel: false,          //horizontal scroll mouse wheel
             vWheel: true,           //vertiacal 
             deltaWheel: 20,
-            onUpdate: (x, y) => {console.log('x=' + x + ', y='+ y)}
+            onUpdate: 0 //(x, y) => {console.log('x=' + x + ', y='+ y)}
            // button: "" ? пока без настроки кнопки  `leftButton`, `rightButton`, `middleButton`
         };
 
         this.scene;
         this.camera;
-        this.clearMovementTimer = 0;
-    
+        this.clearMovementTimer = 0; 
+        this.kineticDown = false;
     }
 
     init(data){
@@ -68,13 +68,18 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
         if(scene == undefined){
             return 0;
         }
-
-        // если вызываем из конфига игры global то
-        //if scene == string then getScene(key);
+        // если вызываем из конфига игры global то if scene == string then getScene(key);
         // иначе if scene typeof Phaser.Scene то
         this.scene = scene;
 
         this.eventEmitter = this.scene.events;
+
+        this.scene.input.on('gameobjectdown', function (pointer, gameObject)
+        {
+            //gameObject.emit('clicked', gameObject);
+            gameObject.showname();
+
+        }, this);
 
         if(camera == undefined){
             this.camera = scene.cameras.main;
@@ -119,6 +124,17 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
         this.beginTime = this.timestamp;
 
         this.velocityY = this.amplitudeY = this.velocityX = this.amplitudeX = 0;
+
+        this.timerDown = setTimeout(() => {
+            if(!this.thresholdReached){
+                this.scene.input.emit('kineticDown');
+                this.kineticDown = true;
+                //this.state.down = true;
+                // this.scene.input.emit('kineticUp');
+                // this.scene.input.emit('kineticClick');
+                //this.scene.input.emit('kineticOff');
+            }
+        }, this.thresholdOfTapTime + 10);
     }
 
     moveCamera(pointer) {
@@ -157,6 +173,13 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
             this.startX = x;
             this.startY = y;
             this.cancelClickEvHandlers();
+            if(this.kineticDown){
+                this.scene.input.emit('kineticUp');
+            }else{
+                clearTimeout(this.timerDown);
+                this.kineticDown = false;
+            }
+            this.scene.input.emit('kineticOff');
             return;
         }
 
@@ -209,7 +232,15 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
     };
 
     endMove() {
-       // console.log('end move');
+        // console.log('end move');
+        //this.scene.input.emit('kineticUp');
+        
+        clearTimeout(this.timerDown);
+        this.kineticDown = false;
+        this.scene.input.emit('kineticUp');
+        this.scene.input.emit('kineticClick');
+        this.scene.input.emit('kineticOff');
+
         clearTimeout(this.clearMovementTimer);
 
         this.pointerId = null;
@@ -358,17 +389,6 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
 
             if (typeof this.settings.onUpdate === 'function') {
                 var deltaX = 0;
-                // if (this.camera.scrollX > 0 
-                //     && this.camera.scrollX + this.game.camera.width < this.game.camera.bounds.width) {
-                //     deltaX = delta;
-                // }
-                //debugger;
-                // let scrollX = cam.scrollX;
-                // let bounds = cam.getScroll(scrollX + delta, 0);
-                // if(scrollX != bounds.x){
-                //     deltaX = delta;
-                // }
-
                 if(this.canCameraMoveX(cam, delta)){
                     deltaX = delta;
                 }
@@ -384,12 +404,6 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
 
             if (typeof this.settings.onUpdate === 'function') {
                 var deltaY = 0;
-                // let scrollY = cam.scrollY;
-                // let bounds = cam.getScroll(0, scrollY + delta);
-                // if(scrollY != bounds.y){
-                //     deltaY = delta;
-                // }
-
                 if(this.canCameraMoveY(cam, delta)){
                     deltaY = delta;
                 }
@@ -398,8 +412,35 @@ export class Kinetic extends Phaser.Plugins.BasePlugin{
         }
     };
 
-    emit(){
+    addInteractive(gameobject){
+        gameobject.setInteractive();
+        gameobject.on('pointerdown', function(){
+            if(this.hasOwnProperty('onKineticDown')){
+                this.scene.input.on('kineticDown', this.onKineticDown, this); 
+            }
+            //debugger;
+            if(this.hasOwnProperty('onKineticUp')){
+                this.scene.input.on('kineticUp', this.onKineticUp, this);
+            }
+            if(this.hasOwnProperty('onKineticClick')){
+                this.scene.input.on('kineticClick', this.onKineticClick, this);
+            }
+            
+            this.scene.input.on('kineticOff', function(){
+                console.log('kineticOff', this.name);
+                if(this.hasOwnProperty('onKineticDown')){
+                    this.scene.input.off('kineticDown', this.onKineticDown, this); 
+                }
+                if(this.hasOwnProperty('onKineticUp')){
+                    this.scene.input.off('kineticUp', this.onKineticUp, this);
+                }
+                if(this.hasOwnProperty('onKineticClick')){
+                    this.scene.input.off('kineticClick', this.onKineticClick, this);
+                }
 
+                this.scene.input.off('kineticOff');
+            }, this)
+        }, gameobject);
     }
 
     /**
