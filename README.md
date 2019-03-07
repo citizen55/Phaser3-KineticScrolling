@@ -1,40 +1,23 @@
-# Phaser3 Plugin Template
+Дополнение для фазер3
+Позволяет удобно прокручивать страницу
+Пример на гитхаб https://citizen55.github.io/res/kinetic/kinetic_phaser3.html
 
-A base plugin template for Phaser 3 to allow you to create your own plugins.
+папки
 
-Run `npm install` and then `npm run build` to build the plugin.
+При разработке я собирал общий пакет, для этого в корне проекта лежит index.html, а 
+в папке src/index.js src/mainscene  файлы для рабочей сборки
+в main.js лежит непосредственно код плагина, расширенный от ScenePlugin
+в main_baseplugin так же код плагина расширенный от BasePlugin
 
-## Using Plugins in Phaser 3
+examples - мой рабочий пример
+kinetic - файлы для отдачи заказчику
+kinetic_phaser2 - исходный плагин для Phaser2
 
-You can load plugins externally, or include them in your bundle.
+Сейчас в webpack.config.js лежит production настройка.
+Для разработки надо будет переименовать webpack.development.config.js в webpack.config.js и потом наообарот.
+По непонятным причинам webpack (эта версия?) не хочет подключать конфиги их с dev and prod расширениями.
 
-To load an external plugin:
+Если вернусь к проекту и решу доработать, то, одназначно надо предусмотреть drag. Я думая это буде делаться сообщением break например.
 
-```
-function preload ()
-{
-    this.load.plugin('BasePlugin', 'path/to/BasePlugin.js');
-}
-```
-
-Then to install it into a Scene:
-
-```
-    this.sys.install('BasePlugin');
-```
-
-If you load the plugins in a Preloader scene then you can add them to any other Scenes by specifying them in the plugins array:
-
-```
-var config = {
-    scene: {
-        create: create,
-        plugins: [ 'BasePlugin' ],
-        map: {
-            'base': 'base'
-        }
-    }
-};
-```
-
-More examples and instructions will follow, but for now see the [Phaser 3 Examples](https://github.com/photonstorm/phaser3-examples) repo for details.
+Так же надо убрать многочисленные постоянные проверки через конструкции если.
+Во время настройки загружать только нужные методы.

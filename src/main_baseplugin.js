@@ -1,11 +1,11 @@
+//import 'phaser';
 (function(){
-    var root = this;
 
-class KineticScrolling extends Phaser.Plugins.ScenePlugin{
+class KineticScrolling extends Phaser.Plugins.BasePlugin{
 
-    constructor(scene, plugimManager){
+    constructor(plugimManager){
 
-        super(scene, plugimManager);
+        super(plugimManager);
 
         this.pointerId = null;
         this.dragging = false;
@@ -51,29 +51,37 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             vWheel: true,           //vertiacal 
             deltaWheel: 20,
             onUpdate: 0 //(x, y) => {console.log('x=' + x + ', y='+ y)}
+           // button: "" ? пока без настроки кнопки  `leftButton`, `rightButton`, `middleButton`
         };
 
+        this.scene;
         this.camera;
         this.clearMovementTimer = 0; 
         this.kineticDown = false;
     }
 
-    boot(){
-        console.log('boot');
-        var eventEmitter = this.systems.events;
-        eventEmitter.on('update', this.update, this);
+    init(data){
+        if (data) this.configure(data);
+        console.log('kinetic init');
     }
 
-    /**
-     * 
-     * @param {Phaser.Camers} camera 
-     * @param {any} config 
-     */
-    start(camera, config){
-
-        if (config) this.configure(config);
+    start(scene, camera){
+        console.log('start');
+        if(scene == undefined){
+            return 0;
+        }
+        // если вызываем из конфига игры global то if scene == string then getScene(key);
+        // иначе if scene typeof Phaser.Scene то
+        this.scene = scene;
 
         this.eventEmitter = this.scene.events;
+
+        this.scene.input.on('gameobjectdown', function (pointer, gameObject)
+        {
+            //gameObject.emit('clicked', gameObject);
+            gameObject.showname();
+
+        }, this);
 
         if(camera == undefined){
             this.camera = scene.cameras.main;
@@ -82,10 +90,18 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         }
 
         this.eventEmitter = this.game.events;
+
+        this.eventEmitter.on('step', this.update, this);
+
         this.scene.input.on('pointerdown', this.beginMove, this);
+        
+        //this.callbackID = 
         this.scene.input.on('pointermove', this.moveCamera, this);
+
         this.scene.input.on('pointerup', this.endMove, this);
+
         this.game.events.on('mouseout', this.endMove, this);
+
         if (window.addEventListener)
         {
             window.addEventListener('DOMMouseScroll', this.mouseWheel.bind(this), false);
@@ -93,8 +109,11 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         }
     }
 
-    beginMove(pointer) {
+    boot(){
+        console.log('boot');
+    }
 
+    beginMove(pointer) {
         this.pointerId = pointer.id;
         this.startX = this.game.input.x;
         this.startY = this.game.input.y;
@@ -120,7 +139,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         let y = pointer.y;
 
         clearTimeout(this.clearMovementTimer);
-
+        // надо попробывать запускать pointermove после pointerdown
         if (!this.pressedDown) {
             return;
         }
@@ -216,6 +235,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         this.scene.input.emit('kineticOff');
 
         clearTimeout(this.clearMovementTimer);
+
         this.pointerId = null;
         this.pressedDown = false;
         this.autoScrollX = false;
@@ -251,8 +271,13 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     }
 
     update(time, elapsed) {
-
-        this.elapsed = Date.now() - this.timestamp;
+        //console.log(this.scene.input.isOver);
+        //console.log(time, delta);
+        //if(!elapsed){
+            this.elapsed = Date.now() - this.timestamp;
+        //}else{
+       //     this.elapsed = elapsed; 
+       // }
         
         this.velocityWheelXAbs = Math.abs(this.velocityWheelX);
         this.velocityWheelYAbs = Math.abs(this.velocityWheelY);
@@ -260,6 +285,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         var delta = 0;
         if (this.autoScrollX && this.amplitudeX != 0) {
 
+           // debugger;
             delta = -this.amplitudeX * Math.exp(-this.elapsed / this.settings.timeConstantScroll);
             if (this.canCameraMoveX(this.camera, delta) && (delta > 0.5 || delta < -0.5)) {
                 this.camera.scrollX = this.targetX - delta;
@@ -302,7 +328,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         }
     };
 
-    /**
+      /**
     * Indicates when camera can move in the x axis
     * @return {boolean}
     */
@@ -385,6 +411,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             if(this.hasOwnProperty('onKineticDown')){
                 this.scene.input.on('kineticDown', this.onKineticDown, this); 
             }
+            //debugger;
             if(this.hasOwnProperty('onKineticUp')){
                 this.scene.input.on('kineticUp', this.onKineticUp, this);
             }
@@ -393,6 +420,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             }
             
             this.scene.input.on('kineticOff', function(){
+                console.log('kineticOff', this.name);
                 if(this.hasOwnProperty('onKineticDown')){
                     this.scene.input.off('kineticDown', this.onKineticDown, this); 
                 }
@@ -440,18 +468,5 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     }
 }
 
-if (typeof exports !== 'undefined') {
-    if (typeof module !== 'undefined' && module.exports) {
-        exports = module.exports = KineticScrolling;
-    }
-    exports.KineticScrolling = KineticScrolling;
-} else if (typeof define !== 'undefined' && define.amd) {
-    define('KineticScrolling', (function() { return root.KineticScrolling = KineticScrolling; })() );
-} else {
-    root.KineticScrolling = KineticScrolling;
-}
 
-return KineticScrolling;
-
-
-}).call(this);
+})
