@@ -1,34 +1,53 @@
-var path = require('path');
-var pathToPhaser = path.join(__dirname, '/node_modules/phaser/');
-var phaser = path.join(pathToPhaser, 'dist/phaser.js');
+'use strict';
+
+const webpack = require('webpack');
+const path = require('path');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
-    mode: 'development',
+    mode: 'production',
     context: `${__dirname}/src/`,
 
     entry: {
-        index: './index.js'
+        KineticScrolling: './main.js',
+        'KineticScrolling.min': './main.js'
     },
 
     output: {
         path: `${__dirname}/dist/`,
-        filename: 'bundle.js',
-        library: 'bundle',
-        libraryTarget: 'umd',
-        umdNamedDefine: true
+        filename: '[name].js',
+        library: 'KineticScrolling'
+       // libraryTarget: 'umd',
+       // umdNamedDefine: true
     },
-    devServer: {
-        contentBase: path.resolve(__dirname, './'),
-        publicPath: '/dist/',
-        host: '127.0.0.1',
-        port: 8000,
-        open: true,
-        lazy: false
-    },
-    resolve: {
-        extensions: ['.js'],
-        alias: {
-            phaser: phaser
-        }
+    module: {
+        rules: [
+          {
+            test: /\.js$/,
+            loader: 'babel-loader',
+            exclude: [
+              /node_modules/,
+            ],
+          },
+        ],
     }
+
+    // , plugins: [
+
+    //     new UglifyJSPlugin({
+    //         include: /\.min\.js$/,
+    //         parallel: true,
+    //         sourceMap: false,
+    //         uglifyOptions: {
+    //             compress: true,
+    //             ie8: false,
+    //             ecma: 5,
+    //             output: {
+    //                 comments: false
+    //             },
+    //             warnings: false
+    //         },
+    //         warningsFilter: (src) => false
+    //     })
+    // ]
 };

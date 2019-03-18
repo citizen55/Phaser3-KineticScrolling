@@ -1,6 +1,6 @@
 {
   "name": "Kinetic-Scrolling-Plugin",
-  "version": "1.2.2",
+  "version": "1.0.0",
   "description": "Kinetic-Scrolling-Plugin for Phaser 3",
   "keywords": [
     "Phaser",
@@ -11,7 +11,11 @@
     "uglifyjs-webpack-plugin": "^2.1.2",
     "webpack": "4.28.3",
     "webpack-cli": "3.1.2",
-    "webpack-dev-server": "3.1.14"
+    "webpack-dev-server": "3.1.14",
+    "babel-cli": "^6.26.0",
+    "babel-loader": "^7.1.5",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.0"
   },
   "dependencies": {
     "phaser": "3.15.0"

@@ -34,8 +34,8 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         this.velocityWheelY = 0;
 
         // if less than the two values is a Tap
-        this.thresholdOfTapTime = 100;
-        this.thresholdOfTapDistance = 10;
+        this.thresholdOfTapTime = 150;
+        this.thresholdOfTapDistance = 40; // 10
 
         // for a smoother scrolling start
         this.thresholdReached = false;
@@ -49,7 +49,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             vScroll: true,          // vertical
             hWheel: false,          //horizontal scroll mouse wheel
             vWheel: true,           //vertiacal 
-            deltaWheel: 20,
+            deltaWheel: 30,
             onUpdate: 0 //(x, y) => {console.log('x=' + x + ', y='+ y)}
         };
 
@@ -81,6 +81,10 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             this.camera = camera;
         }
 
+        let c = this.cam;
+
+        //this.zone =  this.scene.add.zone(c.x, c.y, c.width, c.height).setOrigin(0).setInteractive();
+
         this.eventEmitter = this.game.events;
         this.scene.input.on('pointerdown', this.beginMove, this);
         this.scene.input.on('pointermove', this.moveCamera, this);
@@ -91,9 +95,17 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             window.addEventListener('DOMMouseScroll', this.mouseWheel.bind(this), false);
             window.onmousewheel = this.mouseWheel.bind(this);
         }
+        this.scene.input.on('kineticdrag', () => {
+            this.endMove();
+        })
     }
 
     beginMove(pointer) {
+
+        if(!pointer.camera || pointer.camera.id != this.camera.id){
+            return;
+        }
+        //this.scene.input.on('pointermove', this.moveCamera, this);
 
         this.pointerId = pointer.id;
         this.startX = this.game.input.x;
@@ -108,7 +120,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
         this.timerDown = setTimeout(() => {
             if(!this.thresholdReached){
-                this.scene.input.emit('kineticDown');
+                this.scene.input.emit('kineticDown', pointer);
                 this.kineticDown = true;
             }
         }, this.thresholdOfTapTime + 10);
@@ -116,19 +128,21 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
     moveCamera(pointer) {
 
-        let x = pointer.x;
-        let y = pointer.y;
-
         clearTimeout(this.clearMovementTimer);
 
+        if(!pointer.camera || pointer.camera.id != this.camera.id){
+            this.endMove(pointer);
+        }
         if (!this.pressedDown) {
             return;
         }
-
         // If it is not the current pointer
         if (this.pointerId !== pointer.id) {
             return;
         }
+
+        let x = pointer.x;
+        let y = pointer.y;
 
         this.now = Date.now();
         var elapsed = this.now - this.timestamp;
@@ -207,7 +221,11 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         return (this.now - this.beginTime) < this.thresholdOfTapTime;
     };
 
-    endMove() {
+    endMove(pointer) {
+
+        if(pointer != undefined && !this.pressedDown){
+            return;
+        }
         
         clearTimeout(this.timerDown);
         this.kineticDown = false;
@@ -225,7 +243,9 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
         this.now = Date.now();
 
-        if (this.game.isOver) {
+        let over = pointer && pointer.camera && pointer.camera.id == this.camera.id;
+
+        if (over) {     //this.game.isOver
             if (this.velocityX > 10 || this.velocityX < -10) {
                 this.amplitudeX = 0.8 * this.velocityX;
                 this.targetX = Math.round(this.camera.scrollX - this.amplitudeX);
@@ -238,7 +258,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
                 this.autoScrollY = true;
             }
         }
-        if (!this.game.isOver) {
+        if (!over) {
             this.velocityWheelXAbs = Math.abs(this.velocityWheelX);
             this.velocityWheelYAbs = Math.abs(this.velocityWheelY);
             if ( this.settings.hScroll) {
@@ -382,43 +402,35 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     addInteractive(gameobject){
         gameobject.setInteractive();
         gameobject.on('pointerdown', function(){
-            if(this.hasOwnProperty('onKineticDown')){
+            this.onKineticDown != undefined && 
                 this.scene.input.on('kineticDown', this.onKineticDown, this); 
-            }
-            if(this.hasOwnProperty('onKineticUp')){
-                this.scene.input.on('kineticUp', this.onKineticUp, this);
-            }
-            if(this.hasOwnProperty('onKineticClick')){
-                this.scene.input.on('kineticClick', this.onKineticClick, this);
-            }
-            
-            this.scene.input.on('kineticOff', function(){
-                if(this.hasOwnProperty('onKineticDown')){
-                    this.scene.input.off('kineticDown', this.onKineticDown, this); 
-                }
-                if(this.hasOwnProperty('onKineticUp')){
-                    this.scene.input.off('kineticUp', this.onKineticUp, this);
-                }
-                if(this.hasOwnProperty('onKineticClick')){
-                    this.scene.input.off('kineticClick', this.onKineticClick, this);
-                }
+            this.onKineticUp != undefined && 
+                this.scene.input.on('kineticUp', this.onKineticUp, this); 
+            this.onKineticClick != undefined && 
+                this.scene.input.on('kineticClick', this.onKineticClick, this); 
 
+            this.scene.input.on('kineticOff', function(){
+                this.onKineticDown != undefined && 
+                    this.scene.input.off('kineticDown', this.onKineticDown, this); 
+                this.onKineticUp != undefined && 
+                    this.scene.input.off('kineticUp', this.onKineticUp, this); 
+                this.onKineticClick != undefined && 
+                    this.scene.input.off('kineticClick', this.onKineticClick, this); 
                 this.scene.input.off('kineticOff');
             }, this)
         }, gameobject);
     }
 
     stop(){
+
+        clearTimeout(this.timerDown);
+        clearTimeout(this.clearMovementTimer);
+
         this.eventEmitter.off('step', this.update);
-
         this.pressedDown = false;
-        
-        this.scene.input.off('pointerdown', this.this.beginMove, this);
-
+        this.scene.input.off('pointerdown', this.beginMove, this);
         this.scene.input.off('pointermove', this.moveCamera, this);
-
         this.scene.input.off('pointerup', this.endMove, this);
-
         this.game.events.off('mouseout', this.endMove, this);
 
         if (window.addEventListener)

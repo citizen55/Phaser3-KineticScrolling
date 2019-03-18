@@ -16,3 +16,6 @@ lib/
 examples/
 dist/
 assets/
+kinetic/
+kinetic_phaser2/
+work/
