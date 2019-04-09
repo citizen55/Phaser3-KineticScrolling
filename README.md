@@ -14,7 +14,6 @@ put dist/KineticScrolling.min.js in your folder then enable it
             this.load.scenePlugin({
                 key: 'KineticScrolling',
                 url: 'dist/KineticScrolling.min.js',
-                // url: 'dist/main.js',
                 sceneKey: 'kinetic'
             });
         }
@@ -32,7 +31,7 @@ put dist/KineticScrolling.min.js in your folder then enable it
             hWheel: false,          //horizontal scroll mouse wheel
             vWheel: true,           //vertiacal 
             deltaWheel: 20,
-            onUpdate: 0 //(x, y) => {console.log('x=' + x + ', y='+ y)}
+            onUpdate: (x, y) => {console.log('x=' + x + ', y='+ y)}
         };
 
         this.kinetic.start(this.cam, config);
