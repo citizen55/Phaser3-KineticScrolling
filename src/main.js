@@ -11,7 +11,6 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         this.dragging = false;
         this.pressedDown = false;
         this.timestamp = 0;
-        //this.callbackID = 0;
 
         this.targetX = 0;
         this.targetY = 0;
@@ -34,8 +33,8 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         this.velocityWheelY = 0;
 
         // if less than the two values is a Tap
-        this.thresholdOfTapTime = 150;
-        this.thresholdOfTapDistance = 40; // 10
+        this.thresholdOfTapTime = 150; //100
+        this.thresholdOfTapDistance = 20; // 10
 
         // for a smoother scrolling start
         this.thresholdReached = false;
@@ -59,7 +58,6 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     }
 
     boot(){
-        console.log('boot');
         var eventEmitter = this.systems.events;
         eventEmitter.on('update', this.update, this);
     }
@@ -83,8 +81,6 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
         let c = this.cam;
 
-        //this.zone =  this.scene.add.zone(c.x, c.y, c.width, c.height).setOrigin(0).setInteractive();
-
         this.eventEmitter = this.game.events;
         this.scene.input.on('pointerdown', this.beginMove, this);
         this.scene.input.on('pointermove', this.moveCamera, this);
@@ -101,17 +97,15 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     }
 
     beginMove(pointer) {
-
         if(!pointer.camera || pointer.camera.id != this.camera.id){
             return;
         }
-        //this.scene.input.on('pointermove', this.moveCamera, this);
 
         this.pointerId = pointer.id;
-        this.startX = this.game.input.x;
-        this.startY = this.game.input.y;
-        this.screenX = pointer.screenX;
-        this.screenY = pointer.screenY;
+
+        this.startX = pointer.x; // pointer.downX
+        this.startY = pointer.y; // pointer.downY
+
         this.pressedDown = true;
         this.thresholdReached = false;
         this.timestamp = Date.now();
@@ -151,10 +145,9 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         var deltaX = 0;
         var deltaY = 0;
 
-        // It`s a fast tap not move
-        if ( this.isTap()
-            && Math.abs(pointer.screenY - this.screenY) < this.thresholdOfTapDistance
-            && Math.abs(pointer.screenX - this.screenX) < this.thresholdOfTapDistance
+        if ( this.isTap()  
+            && Math.abs(x - this.startX) < this.thresholdOfTapDistance
+            && Math.abs(y - this.startY) < this.thresholdOfTapDistance
         ) {
             return;
         }
@@ -163,13 +156,15 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             this.thresholdReached = true;
             this.startX = x;
             this.startY = y;
+
             if(this.kineticDown){
                 this.scene.input.emit('kineticUp');
             }else{
                 clearTimeout(this.timerDown);
-                this.kineticDown = false;
+                this.kineticDown = false; 
             }
             this.scene.input.emit('kineticOff');
+            
             return;
         }
 
@@ -210,7 +205,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         this.clearMovementTimer = setTimeout(function () {
             this.velocityX = 0;
             this.velocityY = 0;
-        }.bind(this), 20);
+        }.bind(this), 20); 
     }
 
     /**
@@ -222,15 +217,22 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     };
 
     endMove(pointer) {
-
+        
         if(pointer != undefined && !this.pressedDown){
             return;
         }
-        
+
         clearTimeout(this.timerDown);
         this.kineticDown = false;
-        this.scene.input.emit('kineticUp');
-        this.scene.input.emit('kineticClick');
+        /**
+         * если лента еще движется, то щелчком мы останавиваем ее
+         * но генерируем событие клика на элемене
+         */
+        if(!this.autoScrollX && !this.autoScrollY){
+            
+            this.scene.input.emit('kineticUp');
+            this.scene.input.emit('kineticClick');
+        }
         this.scene.input.emit('kineticOff');
 
         clearTimeout(this.clearMovementTimer);
@@ -334,7 +336,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         return false;
     };
 
-          /**
+    /**
     * Indicates when camera can move in the y axis
     * @return {boolean}
     */
@@ -353,7 +355,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
         if (!this.settings.hWheel && !this.settings.vWheel) return;
 
-        event.preventDefault();
+        //event.preventDefault();
         let delta = 0;
         let wheelDelta = 0;
 
@@ -401,7 +403,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
     addInteractive(gameobject){
         gameobject.setInteractive();
-        gameobject.on('pointerdown', function(){
+        gameobject.on('pointerdown', function(pointer){
             this.onKineticDown != undefined && 
                 this.scene.input.on('kineticDown', this.onKineticDown, this); 
             this.onKineticUp != undefined && 
@@ -441,7 +443,6 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     }
 
     configure(data){
-        //Object.assign(this, data);
         if (data) {
             for (var property in data) {
                 if (this.settings.hasOwnProperty(property)) {

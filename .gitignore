@@ -19,3 +19,5 @@ assets/
 kinetic/
 kinetic_phaser2/
 work/
+kinetic3_debug
+.gitignore
