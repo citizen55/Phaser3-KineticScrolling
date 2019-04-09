@@ -6,6 +6,8 @@ testing with Phaser 3.15. Phaser3.16 got a lot of changes
 put dist/KineticScrolling.min.js in your folder then enable it 
 
 // mainscene.js extends Phaser.Scene
+
+
     preload: function ()
     {
         if(this.kinetic == undefined){
