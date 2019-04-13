@@ -1,7 +1,7 @@
 Plugin for Phaser3/
-Base on https://github.com/jdnichollsc/Phaser-Kinetic-Scrolling-Plugin
-example https://citizen55.github.io/res/kinetic/kinetic_phaser3.html
-testing with Phaser 3.15. Phaser3.16 got a lot of changes
+Base on https://github.com/jdnichollsc/Phaser-Kinetic-Scrolling-Plugin <br>
+demo https://citizen55.github.io/res/kinetic/kinetic_phaser3.html<br>
+testing with Phaser 3.15. Phaser3.16 got a lot of changes <br>
 
 put dist/KineticScrolling.min.js in your folder then enable it 
 
