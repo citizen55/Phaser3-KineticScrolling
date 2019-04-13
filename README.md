@@ -1,4 +1,4 @@
-Plugin for Phaser3/
+Plugin for Phaser3 <br>
 Base on https://github.com/jdnichollsc/Phaser-Kinetic-Scrolling-Plugin <br>
 demo https://citizen55.github.io/res/kinetic/kinetic_phaser3.html<br>
 testing with Phaser 3.15. Phaser3.16 got a lot of changes <br>
