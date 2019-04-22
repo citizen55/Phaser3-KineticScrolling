@@ -41,4 +41,4 @@ put dist/KineticScrolling.min.js in your folder then enable it
 
 Дополнение для фазер3
 Позволяет удобно прокручивать страницу
-Пример на гитхаб https://citizen55.github.io/res/kinetic/kinetic_phaser3.html
+[Пример на гитхаб](https://citizen55.github.io/res/kinetic/kinetic_phaser3.html)
