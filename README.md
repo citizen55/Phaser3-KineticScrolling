@@ -39,7 +39,7 @@ put dist/KineticScrolling.min.js in your folder then enable it
         this.kinetic.start(this.cam, config);
     },
 
-    If you want, then create a game object and  implement the methods, as             onKineticDown and/or onKineticUp and/or onKineticClick and/or onKineticDrag.
+    If you want, then create a game object and  implement the methods, as onKineticDown and/or onKineticUp and/or onKineticClick and/or onKineticDrag.
 
     After, you must invoke metod kinetic.addInteractive(gameobject);
 
