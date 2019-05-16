@@ -31,10 +31,20 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
         this.velocityWheelX = 0;
         this.velocityWheelY = 0;
+        
+        /** check the conditions to trigger  drag event (elements of kinetic band) */
+        this._allowDragX = false;
+        this._allowDragY = false;
+        
 
         // if less than the two values is a Tap
-        this.thresholdOfTapTime = 150; //100
-        this.thresholdOfTapDistance = 20; // 10
+        if(this.scene.game.isTouchDevice){
+            this.thresholdOfTapTime = 200; //100
+            this.thresholdOfTapDistance = 15; // 10
+        }else{
+            this.thresholdOfTapTime = 150; //100
+            this.thresholdOfTapDistance = 20; // 10
+        }
 
         // for a smoother scrolling start
         this.thresholdReached = false;
@@ -49,6 +59,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             hWheel: false,          //horizontal scroll mouse wheel
             vWheel: true,           //vertiacal 
             deltaWheel: 30,
+            allowDrag : false,
             onUpdate: 0 //(x, y) => {console.log('x=' + x + ', y='+ y)}
         };
 
@@ -91,7 +102,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
             window.addEventListener('DOMMouseScroll', this.mouseWheel.bind(this), false);
             window.onmousewheel = this.mouseWheel.bind(this);
         }
-        this.scene.input.on('kineticdrag', () => {
+        this.game.events.on('kineticdrag', () => {
             this.endMove();
         })
     }
@@ -154,6 +165,27 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
 
         if (!this.thresholdReached) {
             this.thresholdReached = true;
+
+            /** check start dragging */
+            if(this._allowDragY){
+                deltaY = y - this.startY;
+                if (deltaY > 10) {
+                    console.log('drag y');
+                    this.scene.input.emit('kineticdrag', pointer);
+                    this.scene.input.emit('kineticOff');
+                    //this.endMove();
+                }
+            }
+            if(this._allowDragX){
+                deltaX = x - this.startX;
+                if (deltaX > 10) {
+                    console.log('drag x');
+                    this.scene.input.emit('kineticdrag', pointer);
+                    this.scene.input.emit('kineticOff');
+                    //this.endMove();
+                }
+            }
+
             this.startX = x;
             this.startY = y;
 
@@ -244,7 +276,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
         if (!this.settings.kineticMovement) return;
 
         this.now = Date.now();
-
+        // check whether pointer over camera
         let over = pointer && pointer.camera && pointer.camera.id == this.camera.id;
 
         if (over) {     //this.game.isOver
@@ -260,16 +292,16 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
                 this.autoScrollY = true;
             }
         }
-        if (!over) {
-            this.velocityWheelXAbs = Math.abs(this.velocityWheelX);
-            this.velocityWheelYAbs = Math.abs(this.velocityWheelY);
-            if ( this.settings.hScroll) {
-                this.autoScrollX = true;
-            }
-            if (this.settings.vScroll) {
-                this.autoScrollY = true;
-            }
-        }
+        // if (!over) {
+        //     this.velocityWheelXAbs = Math.abs(this.velocityWheelX);
+        //     this.velocityWheelYAbs = Math.abs(this.velocityWheelY);
+        //     if ( this.settings.hScroll) {
+        //         this.autoScrollX = true;
+        //     }
+        //     if (this.settings.vScroll) {
+        //         this.autoScrollY = true;
+        //     }
+        // }
     }
 
     update(time, elapsed) {
@@ -354,7 +386,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     mouseWheel(event) {
 
         if (!this.settings.hWheel && !this.settings.vWheel) return;
-
+        if(!this.game.isOver) return;
         //event.preventDefault();
         let delta = 0;
         let wheelDelta = 0;
@@ -402,7 +434,7 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
     };
 
     addInteractive(gameobject){
-        gameobject.setInteractive();
+        gameobject.setInteractive({ useHandCursor: true });
         gameobject.on('pointerdown', function(pointer){
             this.onKineticDown != undefined && 
                 this.scene.input.on('kineticDown', this.onKineticDown, this); 
@@ -410,6 +442,10 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
                 this.scene.input.on('kineticUp', this.onKineticUp, this); 
             this.onKineticClick != undefined && 
                 this.scene.input.on('kineticClick', this.onKineticClick, this); 
+            ////////////new
+            this.onKineticDrag != undefined &&
+                this.scene.input.on('kineticdrag', this.onKineticDrag, this);
+            //////////////
 
             this.scene.input.on('kineticOff', function(){
                 this.onKineticDown != undefined && 
@@ -418,6 +454,10 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
                     this.scene.input.off('kineticUp', this.onKineticUp, this); 
                 this.onKineticClick != undefined && 
                     this.scene.input.off('kineticClick', this.onKineticClick, this); 
+                ////////// new
+                this.onKineticDrag != undefined &&
+                    this.scene.input.off('kineticdrag', this.onKineticDrag, this);
+                ///////////
                 this.scene.input.off('kineticOff');
             }, this)
         }, gameobject);
@@ -448,6 +488,14 @@ class KineticScrolling extends Phaser.Plugins.ScenePlugin{
                 if (this.settings.hasOwnProperty(property)) {
                     this.settings[property] = data[property];
                 }
+            }
+        }
+        if(this.settings.allowDrag){
+            if(this.settings.hScroll){
+                this._allowDragY = true;
+            }
+            if(this.settings.vScroll){
+                this._allowDragX = true;
             }
         }
     }
