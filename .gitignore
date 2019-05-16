@@ -10,11 +10,10 @@ Thumbs.db
 node_modules/
 
 # Build
-dist/
+dist/*
 /npm-debug.log
 lib/
 examples/
-dist/
 assets/
 kinetic/
 kinetic_phaser2/
