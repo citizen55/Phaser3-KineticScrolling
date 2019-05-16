@@ -32,11 +32,16 @@ put dist/KineticScrolling.min.js in your folder then enable it
             hWheel: false,          //horizontal scroll mouse wheel
             vWheel: true,           //vertiacal 
             deltaWheel: 20,
+            allowDrag : true,
             onUpdate: (x, y) => {console.log('x=' + x + ', y='+ y)}
         };
 
         this.kinetic.start(this.cam, config);
     },
+
+    If you want, then create a game object and  implement the methods, as             onKineticDown and/or onKineticUp and/or onKineticClick and/or onKineticDrag.
+
+    After, you must invoke metod kinetic.addInteractive(gameobject);
 
 
 Дополнение для фазер3
