@@ -1,23 +1,44 @@
+Plugin for Phaser3 <br>
+Base on https://github.com/jdnichollsc/Phaser-Kinetic-Scrolling-Plugin <br>
+[demo](https://citizen55.github.io/res/kinetic/kinetic_phaser3.html)
+ <br>
+testing with Phaser 3.15. Phaser3.16 got a lot of changes <br>
+
+put dist/KineticScrolling.min.js in your folder then enable it 
+
+// mainscene.js extends Phaser.Scene
+
+
+    preload: function ()
+    {
+        if(this.kinetic == undefined){
+            this.load.scenePlugin({
+                key: 'KineticScrolling',
+                url: 'dist/KineticScrolling.min.js',
+                sceneKey: 'kinetic'
+            });
+        }
+    },
+    
+    create: function ()
+    {
+        this.cam = this.cameras.main;
+
+        let config = {
+            kineticMovement: true,
+            timeConstantScroll: 325, //really mimic iOS
+            hScroll: false,          // horizontal with pointer
+            vScroll: true,          // vertical
+            hWheel: false,          //horizontal scroll mouse wheel
+            vWheel: true,           //vertiacal 
+            deltaWheel: 20,
+            onUpdate: (x, y) => {console.log('x=' + x + ', y='+ y)}
+        };
+
+        this.kinetic.start(this.cam, config);
+    },
+
+
 Дополнение для фазер3
 Позволяет удобно прокручивать страницу
-Пример на гитхаб https://citizen55.github.io/res/kinetic/kinetic_phaser3.html
-
-папки
-
-При разработке я собирал общий пакет, для этого в корне проекта лежит index.html, а 
-в папке src/index.js src/mainscene  файлы для рабочей сборки
-в main.js лежит непосредственно код плагина, расширенный от ScenePlugin
-в main_baseplugin так же код плагина расширенный от BasePlugin
-
-examples - мой рабочий пример
-kinetic - файлы для отдачи заказчику
-kinetic_phaser2 - исходный плагин для Phaser2
-
-Сейчас в webpack.config.js лежит production настройка.
-Для разработки надо будет переименовать webpack.development.config.js в webpack.config.js и потом наообарот.
-По непонятным причинам webpack (эта версия?) не хочет подключать конфиги их с dev and prod расширениями.
-
-Если вернусь к проекту и решу доработать, то, одназначно надо предусмотреть drag. Я думая это буде делаться сообщением break например.
-
-Так же надо убрать многочисленные постоянные проверки через конструкции если.
-Во время настройки загружать только нужные методы.
+[Пример на гитхаб](https://citizen55.github.io/res/kinetic/kinetic_phaser3.html)
